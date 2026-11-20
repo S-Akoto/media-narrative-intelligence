@@ -12,6 +12,9 @@ from pydantic import BaseModel, Field
 
 
 class NarrativeExtraction(BaseModel):
+    is_relevant_policy_story: bool = Field(
+        description="True ONLY if the story directly involves domestic politics, public policy, regulation, economy, or public institutions in the target market. False for foreign sports, celebrity gossip, or unrelated global tech/business wire reprints."
+    )
     policy_domain: str = Field(description="Closest matching policy domain from the provided list.")
     agenda_initiator: Literal[
         "Government/Executive",
@@ -38,10 +41,10 @@ def load_config(config_path: str) -> dict:
 
 
 def extract_with_retry(client: genai.Client, prompt: str) -> NarrativeExtraction:
-    models_to_try = ["gemini-3.8-flash", "gemini-3.1-flash-lite"]
+    models_to_try = ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
     last_err = None
     for model_name in models_to_try:
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 response = client.models.generate_content(
                     model=model_name,
@@ -66,18 +69,21 @@ def run_enrichment(config_path: str) -> Path:
 
     cfg = load_config(config_path)
     market_id = cfg["market_id"]
+    market_name = cfg["market_name"]
     domains = ", ".join(cfg["policy_domains"])
 
     df = pd.read_parquet(Path("data") / f"clustered_{market_id}.parquet")
     canonical_df = df[df["is_canonical"]].copy()
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options={"timeout": 30000})
     enriched_rows = []
+    total = len(canonical_df)
 
-    print(f"[{market_id}] Enriching {len(canonical_df)} canonical stories...")
-    for _, row in canonical_df.iterrows():
+    print(f"[{market_id}] Enriching {total} canonical stories...", flush=True)
+    for idx, (_, row) in enumerate(canonical_df.iterrows(), start=1):
         prompt = (
-            f"Analyze this news story for a political media intelligence brief.\n"
+            f"Analyze this news story for a political media intelligence brief focused on: {market_name}.\n"
+            f"Set is_relevant_policy_story=False if this is foreign sports, entertainment, or an unrelated global wire reprint that does not affect {market_name}.\n"
             f"Allowed policy_domain values: [{domains}].\n\n"
             f"Outlet: {row['outlet_name']} ({row['outlet_category']})\n"
             f"Headline: {row['title']}\n"
@@ -88,6 +94,7 @@ def run_enrichment(config_path: str) -> Path:
             enriched_rows.append(
                 {
                     "cluster_id": row["cluster_id"],
+                    "is_relevant_policy_story": parsed.is_relevant_policy_story,
                     "policy_domain": parsed.policy_domain,
                     "agenda_initiator": parsed.agenda_initiator,
                     "framing_stance": parsed.framing_stance,
@@ -96,10 +103,12 @@ def run_enrichment(config_path: str) -> Path:
                     "unanswered_questions": parsed.unanswered_questions,
                 }
             )
+            if idx % 10 == 0 or idx == total:
+                print(f"  [{market_id}] Processed {idx}/{total}...", flush=True)
         except Exception as exc:
-            print(f"Skipping {row['cluster_id']}: {exc}")
+            print(f"  [{market_id}] Skipping {idx}/{total} ({row['cluster_id']}): {exc}", flush=True)
 
-        time.sleep(1.5)
+        time.sleep(1.0)
 
     if not enriched_rows:
         raise RuntimeError(f"[{market_id}] No stories were enriched.")
@@ -108,7 +117,8 @@ def run_enrichment(config_path: str) -> Path:
     merged_df = df.merge(enrich_df, on="cluster_id", how="left")
     out_path = Path("data") / f"enriched_{market_id}.parquet"
     merged_df.to_parquet(out_path, index=False)
-    print(f"[{market_id}] Saved {len(enriched_rows)}/{len(canonical_df)} enriched stories -> {out_path}")
+    relevant_count = sum(1 for r in enriched_rows if r["is_relevant_policy_story"])
+    print(f"[{market_id}] Saved {len(enriched_rows)} enriched ({relevant_count} policy-relevant) -> {out_path}", flush=True)
     return out_path
 
 
