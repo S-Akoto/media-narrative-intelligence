@@ -1,0 +1,52 @@
+name: Weekly Media Intelligence Pipeline
+
+on:
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run US & Connecticut Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python src/ingest.py --config config/us_ct.yaml
+          python src/cluster.py --config config/us_ct.yaml
+          python src/enrich.py --config config/us_ct.yaml
+
+      - name: Run Ghana Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python src/ingest.py --config config/ghana.yaml
+          python src/cluster.py --config config/ghana.yaml
+          python src/enrich.py --config config/ghana.yaml
+
+      - name: Build DuckDB Warehouse & GitHub Pages Report
+        run: python src/report.py
+
+      - name: Commit & Push Updated Data and Dashboard
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.parquet data/*.duckdb docs/index.html
+          git diff --staged --quiet || git commit -m "chore: weekly media intelligence update [skip ci]"
+          git push

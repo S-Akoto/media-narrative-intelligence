@@ -1,0 +1,34 @@
+market_id: "us_ct"
+market_name: "US National & Connecticut Policy Intelligence"
+lookback_days: 7
+similarity_threshold: 0.84
+
+policy_domains:
+  - "Economy & Cost of Living"
+  - "Energy & Utilities"
+  - "Healthcare & Insurance"
+  - "Housing & Infrastructure"
+  - "Education & Workforce"
+  - "Governance & Legislation"
+
+rss_feeds:
+  - outlet_id: "ct_mirror"
+    outlet_name: "CT Mirror"
+    category: "State Investigative"
+    url: "https://ctmirror.org/feed/"
+  - outlet_id: "npr_politics"
+    outlet_name: "NPR Politics"
+    category: "National Broadcast"
+    url: "https://feeds.npr.org/1014/rss.xml"
+  - outlet_id: "the_hill"
+    outlet_name: "The Hill"
+    category: "National Policy"
+    url: "https://thehill.com/news/feed/"
+  - outlet_id: "pbs_newshour"
+    outlet_name: "PBS NewsHour Politics"
+    category: "National Broadcast"
+    url: "https://www.pbs.org/newshour/feeds/rss/politics"
+  - outlet_id: "govinfo_bills"
+    outlet_name: "GovInfo Congressional Bills"
+    category: "Official Legislative"
+    url: "https://www.govinfo.gov/rss/bills.xml"

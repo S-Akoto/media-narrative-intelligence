@@ -1,0 +1,35 @@
+market_id: "ghana"
+market_name: "Ghana Political Media & Agenda-Setting Intelligence"
+lookback_days: 7
+similarity_threshold: 0.85
+
+policy_domains:
+  - "Economy & Cedi"
+  - "Energy & Power"
+  - "Mining & Galamsey"
+  - "Infrastructure & Roads"
+  - "Agriculture & Cocoa"
+  - "Health & Education"
+  - "Governance & Accountability"
+
+rss_feeds:
+  - outlet_id: "myjoyonline"
+    outlet_name: "MyJoyOnline"
+    category: "Commercial Portal"
+    url: "https://www.myjoyonline.com/feed/"
+  - outlet_id: "citinewsroom"
+    outlet_name: "Citi Newsroom"
+    category: "Commercial Portal"
+    url: "https://citinewsroom.com/feed/"
+  - outlet_id: "3news"
+    outlet_name: "3News"
+    category: "Commercial Broadcast"
+    url: "https://3news.com/feed/"
+  - outlet_id: "graphic_online"
+    outlet_name: "Graphic Online"
+    category: "State Establishment"
+    url: "https://www.graphic.com.gh/feed"
+  - outlet_id: "daily_guide"
+    outlet_name: "Daily Guide Network"
+    category: "Partisan Press"
+    url: "https://dailyguidenetwork.com/feed/"
